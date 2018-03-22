@@ -1,0 +1,70 @@
+---
+title: "machine_learning_R"
+author: "Louis Gruand"
+date: "3/22/2018"
+output: html_document
+---
+
+Below you will find the annotated code for the machine learning project from Coursera. 
+
+```{r setup, eval=FALSE}
+library(caret)
+library(kernlab)
+library(klaR)
+
+## Getting the Data
+
+url_train <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+if(!file.exists("./project")) {dir.create("project")}
+download.file(url_train,destfile="./project/train.csv",method="curl")
+train <- read.csv("./project/train.csv")
+
+url_test <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+download.file(url_test,destfile="./project/test.csv",method="curl")
+test <- read.csv("./project/test.csv")
+
+
+
+nearzero <- nearZeroVar(train, saveMetrics = TRUE)
+train <- train[, !nearzero$nzv]
+
+
+train <- train[colMeans(is.na(train)) <= 0.5 & colMeans((train==0),na.rm=T) <= 0.5]
+
+
+train <- train[, -(1:6)]
+
+# calculate correlation matrix
+correlationMatrix <- cor(train[,1:52])
+# find attributes that are highly corrected 
+highlyCorrelated <- findCorrelation(correlationMatrix, cutoff=0.6)
+#so only get the important stuff
+names(train)[highlyCorrelated]
+
+
+tc <- trainControl(method = "cv", number = 7, verboseIter=FALSE , preProcOptions="pca", allowParallel=TRUE)
+
+# define training control
+tc <- trainControl(method="cv", number=5)
+# fix the parameters of the algorithm
+grid <- expand.grid(.fL=c(0), .usekernel=c(FALSE))
+# train the model
+
+mod_svmr <- train(classe ~ ., data = train, method = "svmRadial", trControl= tc)
+
+
+pred_svmr <- predict(mod_svmr, test)
+
+
+
+answer = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+answer(pred_svmr)
+```
+
